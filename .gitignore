@@ -205,3 +205,17 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# === PDv1 additions ===
+# Không commit dữ liệu thô/PII và file môi trường
+data/*
+!data/README_DATA.md
+
+.env
+*.env
+
+# Artifacts hình/HTML thì ignore; giữ 3 file cần thiết
+artifacts/*.html
+artifacts/*.png
+!artifacts/pdv1_metadata.json
+!artifacts/pdv1_test_scores.csv
+!artifacts/README.txt
