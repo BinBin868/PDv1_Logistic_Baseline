@@ -70,13 +70,27 @@ python scripts/30_report.py \
 # Mở xem trong Codespaces:
 # Explorer (panel trái) → artifacts/ → mở report_test.md
 7) (Tuỳ chọn) Score & Report HOLDOUT (Q4/2024)
-( Thêm file data/holdout.csv (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế). Sau đó:
+( Thêm file data/holdout.csv (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
+python - <<'PY'
+import pandas as pd
+months = ["2024-11","2024-12"]
+df = pd.read_csv("data/train_clean.csv", sep=None, engine="python")
+mask = df["ym"].isin(months)
+if "approved" in df.columns:
+    mask = mask & (df["approved"]==1)
+# Ép target 0/1 và loại NA ở target
+df["default_90d"] = pd.to_numeric(df["default_90d"], errors="coerce")
+df = df[df["default_90d"].isin([0,1]) & mask].copy()
+print("Holdout shape:", df.shape, "| ODR (bad rate):", df["default_90d"].mean())
+df.to_csv("data/holdout_clean.csv", index=False)
+PY
+# Sau đó: Score HOLDOUT bằng model đã train (+ Platt)
 python scripts/20_score.py \
   --model artifacts/model.joblib \
-  --input data/holdout.csv \
+  --input data/holdout_clean.csv \
   --id-col app_id \
   --out artifacts/pdv1_holdout_scores.csv
-
+# Report HOLDOUT (AUC/KS/Brier + decile, p̄/ODR/wMAE)
 python scripts/30_report.py \
   --scores artifacts/pdv1_holdout_scores.csv \
   --y-col default_90d \
