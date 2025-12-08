@@ -23,7 +23,6 @@ ls -l data/
 Sinh ra file sạch train_clean.csv, test_clean.csv.) 
 python - <<'PY'
 import pandas as pd, numpy as np
-
 for split in ["train","test"]:
     df = pd.read_csv(f"data/{split}.csv", sep=None, engine="python")
     # ép kiểu target về {0,1}, loại NA
@@ -45,7 +44,6 @@ python scripts/10_train.py \
   --platt-s 0.5 \
   --platt-b -0.996 \
   --mean-matching on
-
 # Artifacts kỳ vọng:
 #   artifacts/model.joblib
 #   artifacts/pdv1_metadata.json  (ghi s, b, cal_months,...)
@@ -59,7 +57,6 @@ python scripts/20_score.py \
   --input data/test_clean.csv \
   --id-col app_id \
   --out artifacts/pdv1_test_scores.csv
-
 ls -l artifacts/pdv1_test_scores.csv
 6) Report (TEST) — AUC/KS/Brier + decile
 python scripts/30_report.py \
@@ -78,7 +75,6 @@ df = pd.read_csv("data/train_clean.csv", sep=None, engine="python")
 mask = df["ym"].isin(months)
 if "approved" in df.columns:
     mask = mask & (df["approved"]==1)
-# Ép target 0/1 và loại NA ở target
 df["default_90d"] = pd.to_numeric(df["default_90d"], errors="coerce")
 df = df[df["default_90d"].isin([0,1]) & mask].copy()
 print("Holdout shape:", df.shape, "| ODR (bad rate):", df["default_90d"].mean())
