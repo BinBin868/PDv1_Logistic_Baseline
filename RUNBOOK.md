@@ -1,18 +1,9 @@
 SYNC: PDV1_SYNC_2025-11-07_v2
-0) Mở Codespaces & chuẩn bị phiên làm việc
-# [0.1] Kích hoạt venv (nếu chưa có sẽ tạo ở bước 1)
-source .venv/bin/activate 2>/dev/null || true
-
-# [0.2] Khai báo đường dẫn module src/ để tránh lỗi "No module named 'pdv1'"
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
-
-# [0.3] Tạo thư mục artifacts nếu chưa có
-mkdir -p artifacts
-1) Tạo môi trường & cài thư viện (chạy 1 lần, hoặc khi môi trường mới)
-   # [1.1] Tạo venv nhẹ
-python3 -m venv .venv
+# [1.1] Mở Codespaces & chuẩn bị phiên làm việc
+[ -d .venv ] || python3 -m venv .venv
 source .venv/bin/activate
-
+export PYTHONPATH="$PWD/src:$PYTHONPATH"
+mkdir -p artifacts
 # [1.2] Nâng pip và cài libs tối thiểu
 python -m pip install --upgrade pip
 pip install "pandas>=2.0" "numpy>=1.24" "scikit-learn>=1.3" joblib tabulate
