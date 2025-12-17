@@ -172,6 +172,36 @@ with open(report_path, "a", encoding="utf-8") as f:
     f.write(block)
 print(f"[ok] appended calibration sanity to {report_path}")
 PY****
+9) Create data/holdout_clean.csv 
+(ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
+python - <<'PY'
+import pandas as pd
+months = ["2024-11","2024-12"]
+df = pd.read_csv("data/train_clean.csv", sep=None, engine="python")
+mask = df["ym"].isin(months)
+if "approved" in df.columns:
+    mask = mask & (df["approved"]==1)
+df["default_90d"] = pd.to_numeric(df["default_90d"], errors="coerce")
+df = df[df["default_90d"].isin([0,1]) & mask].copy()
+print("Holdout shape:", df.shape, "| ODR (bad rate):", df["default_90d"].mean())
+df.to_csv("data/holdout_clean.csv", index=False)
+PY
+# Sau đó: Score HOLDOUT bằng model đã train (+ Platt)
+python scripts/20_score.py \
+  --model artifacts/model.joblib \
+  --input data/holdout_clean.csv \
+  --id-col app_id \
+  --out artifacts/pdv1_holdout_scores.csv
+# Report HOLDOUT (AUC/KS/Brier + decile, p̄/ODR/wMAE)
+python scripts/30_report.py \
+  --scores artifacts/pdv1_holdout_scores.csv \
+  --y-col default_90d \
+  --out artifacts/report_holdout.md
+
+
+
+
+
 8) Calibration sanity (HOLDOUT) — ODR, p̄, wMAE_decile, KS@decile****
 SCORES="artifacts/pdv1_holdout_scores.csv" REPORT="artifacts/report_holdout.md" python - <<'PY'
 import os, math
@@ -283,32 +313,6 @@ with open(report_path, "a", encoding="utf-8") as f:
 print(f"[ok] appended calibration sanity to {report_path}")
 PY
 
-9) (Tuỳ chọn) Score & Report HOLDOUT (Q4/2024)
-( Thêm file data/holdout.csv (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
-python - <<'PY'
-import pandas as pd
-months = ["2024-11","2024-12"]
-df = pd.read_csv("data/train_clean.csv", sep=None, engine="python")
-mask = df["ym"].isin(months)
-if "approved" in df.columns:
-    mask = mask & (df["approved"]==1)
-df["default_90d"] = pd.to_numeric(df["default_90d"], errors="coerce")
-df = df[df["default_90d"].isin([0,1]) & mask].copy()
-print("Holdout shape:", df.shape, "| ODR (bad rate):", df["default_90d"].mean())
-df.to_csv("data/holdout_clean.csv", index=False)
-PY
-# Sau đó: Score HOLDOUT bằng model đã train (+ Platt)
-python scripts/20_score.py \
-  --model artifacts/model.joblib \
-  --input data/holdout_clean.csv \
-  --id-col app_id \
-  --out artifacts/pdv1_holdout_scores.csv
-# Report HOLDOUT (AUC/KS/Brier + decile, p̄/ODR/wMAE)
-python scripts/30_report.py \
-  --scores artifacts/pdv1_holdout_scores.csv \
-  --y-col default_90d \
-  --out artifacts/report_holdout.md
- 
 10) Gợi ý “linh hoạt”
 Đổi cửa sổ calibration: thay --cal-months ... ở Bước 4.
 Override s,b: cập nhật --platt-s, --platt-b ở Bước 4; AUC/KS giữ nguyên (mapping đơn điệu).
