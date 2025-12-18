@@ -129,6 +129,12 @@ Mỗi report gồm:
 4) Monitoring: theo tháng/kênh, kiểm tra PSI + ODR drift
 
 ---
+How credit policy uses this PD 
+PD được dùng để xếp hạng rủi ro (band/decile) và kích hoạt rule/policy tương ứng, không phải quyết định đơn lẻ.
+Ví dụ: hồ sơ PD thấp → flow chuẩn; PD trung bình → yêu cầu bổ sung chứng từ/giảm limit; PD cao → giảm hạn mức, tăng pricing hoặc từ chối theo risk appetite.
+Policy kết hợp PD với các điều kiện bắt buộc (KYC, fraud checks, income/DTI, blacklist).
+Cut-off/band được hiệu chỉnh theo risk appetite và theo dõi định kỳ qua ODR vs p̄, drift/PSI và KS.
+Khi ODR lệch p̄ hoặc drift tăng, policy có thể siết cut-off hoặc yêu cầu re-calibration / model review.
 
 ## 9) Validation & controls (Kiểm soát & kiểm định)
 
