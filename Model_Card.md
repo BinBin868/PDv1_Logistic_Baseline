@@ -41,8 +41,10 @@ Trong repo này, mô hình dự báo **PD cho default_90d** (default trong 90 ng
 - **Target column:** `default_90d`
 - **Meaning:** 1 = default trong 90 ngày, 0 = không default trong 90 ngày
 - **Data quality rule (trong RUNBOOK):** ép kiểu về 0/1, xử lý NA để tránh lỗi pipeline
+- PD horizon: **90 days** (PD_90d). Target column trong repo: `default_90d`.
+- Default ở đây là  phục vụ mô hình hoá (ví dụ DPD≥90 trong 90 ngày / default flag theo dữ liệu nguồn).
+  Repo giả định `default_90d` đã được tạo sẵn trong dataset; bước “clean/coerce” trong RUNBOOK chỉ nhằm đảm bảo target là {0,1}.
 
----
 
 ## 4) Population & splits (Đối tượng áp dụng & chia tập)
 
@@ -54,11 +56,10 @@ Trong repo này, mô hình dự báo **PD cho default_90d** (default trong 90 ng
 - **TRAIN:** `data/train_clean.csv`
 - **TEST:** `data/test_clean.csv`
 - **HOLDOUT (optional, demo production-check):** `data/holdout_clean.csv`  
-  - HOLDOUT được tạo từ TRAIN theo `CAL_MONTHS` (ví dụ `2024-11`, `2024-12`) để kiểm tra “ổn định theo thời gian” / “out-of-time-like”.
-
+-  HOLDOUT trong repo là **out-of-time-like demo**: được tạo bằng cách lọc `train_clean.csv` theo `CAL_MONTHS` (ví dụ 2024-11, 2024-12) và (nếu có) `approved==1`, rồi lưu thành `data/holdout_clean.csv`.
+- Vì HOLDOUT được “rút ra từ train_clean”, nó **không đại diện hoàn hảo** cho OOT production; mục tiêu là demo pipeline (score/report/sanity).
+- Production expectation: cần HOLDOUT OOT thật (tháng/quý sau) + freeze policy + so sánh drift & performance theo thời gian.
 > Ghi chú: HOLDOUT trong repo hiện được tạo “từ TRAIN theo tháng” để demo luồng & kiểm tra. Nếu bạn có dữ liệu out-of-time thật thì thay file này bằng dữ liệu thật sẽ giá trị hơn.
-
----
 
 ## 5) Model inputs (Biến đầu vào)
 
@@ -130,11 +131,23 @@ Mỗi report gồm:
 
 ---
 How credit policy uses this PD 
-PD được dùng để xếp hạng rủi ro (band/decile) và kích hoạt rule/policy tương ứng, không phải quyết định đơn lẻ.
-Ví dụ: hồ sơ PD thấp → flow chuẩn; PD trung bình → yêu cầu bổ sung chứng từ/giảm limit; PD cao → giảm hạn mức, tăng pricing hoặc từ chối theo risk appetite.
-Policy kết hợp PD với các điều kiện bắt buộc (KYC, fraud checks, income/DTI, blacklist).
-Cut-off/band được hiệu chỉnh theo risk appetite và theo dõi định kỳ qua ODR vs p̄, drift/PSI và KS.
-Khi ODR lệch p̄ hoặc drift tăng, policy có thể siết cut-off hoặc yêu cầu re-calibration / model review.
+### How credit policy uses this PD (PD band → action)
+
+PD_90d là “xác suất vỡ nợ trong 90 ngày” dùng để phân luồng quyết định tín dụng theo risk appetite.
+Trong policy thực tế, PD được quy đổi thành PD band và gắn “action” (duyệt/soát/giảm hạn mức/từ chối) thay vì dùng 1 con số đơn lẻ.
+Ví dụ triển khai: chấm PD → gán band → áp rule (cut-off + limit + pricing) → ghi log quyết định & lý do.
+PD không thay thế policy; nó là input định lượng để policy ra quyết định nhất quán và audit được.
+PD thường đi cùng LGD & EAD để tính Expected Loss (EL = PD×LGD×EAD) cho pricing/limit/portfolio.
+Cut-off có thể thay đổi theo kênh/sản phẩm/chu kỳ, nhưng phải được governance phê duyệt và theo dõi drift.
+
+**Ví dụ (illustrative PD banding)**
+| PD_90d band | Action (min) | Ghi chú |
+|---|---|---|
+| <= 3% | Auto-approve | vẫn cần rule “hard reject” (fraud/KYC) |
+| (3%, 8%] | Manual review | yêu cầu chứng từ / tăng kiểm soát |
+| (8%, 15%] | Approve with constraints | giảm limit / tăng pricing / thêm collateral |
+| > 15% | Decline / refer | chỉ override theo governance |
+
 
 ## 9) Validation & controls (Kiểm soát & kiểm định)
 
@@ -144,6 +157,15 @@ Repo thể hiện các kiểm soát quan trọng dạng “production-like”:
 - **Calibration sanity:** p̄ vs ODR, wMAE_decile
 - **Ranking quality:** AUC/KS + KS max decile
 - **Out-of-time-like check (HOLDOUT):** kiểm tra hiệu năng khi tách theo tháng (CAL_MONTHS)
+  
+### Minimum production controls (baseline)
+- Data quality gates: schema/column whitelist, type checks, missing-rate thresholds, target sanity (bad rate range), duplicate keys (`app_id`) & leakage flags.
+- Leakage checks: loại biến “sau giải ngân”/“hậu quả của default”; kiểm tra split theo thời gian để tránh look-ahead.
+- Reproducibility: version hóa code + artifact (`artifacts/model.joblib`, `artifacts/pdv1_metadata.json`), log tham số train (cal_months, platt s/b, mean-matching).
+- Model performance checks: AUC/KS/Brier tối thiểu trên TEST & (OOT) HOLDOUT; theo dõi KS-max decile để biết vùng tách lớp mạnh.
+- Calibration checks: so sánh **p̄ vs ODR** và **wMAE_decile** (report hiện có) + ngưỡng cảnh báo khi lệch tăng.
+- Monitoring triggers: PSI/shift theo `ym`/kênh/sản phẩm; cảnh báo khi bad rate, AUC/KS, calibration drift vượt ngưỡng.
+- Overrides & governance: policy override phải có lý do, giới hạn %, approval workflow; định kỳ review & sign-off.
 
 ---
 
