@@ -98,7 +98,7 @@ Trong repo này, mô hình dự báo **PD cho default_90d** (default trong 90 ng
 - `artifacts/pdv1_test_scores.csv` — score trên TEST
 - `artifacts/pdv1_holdout_scores.csv` — score trên HOLDOUT (nếu chạy)
 
-### Reports (dành cho HR/manager review)
+### Reports 
 - `artifacts/report_test.md`
 - `artifacts/report_holdout.md`
 
