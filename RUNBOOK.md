@@ -31,7 +31,6 @@ for split in ["train","test"]:
     # có thể xử lý thêm các cột số khác nếu cần:
     # for c in ["app_id","loan_amt",...]: df[c] = pd.to_numeric(df[c], errors="coerce")
     df.to_csv(f"data/{split}_clean.csv", index=False)
-
 print("[ok] wrote data/train_clean.csv & data/test_clean.csv")
 PY
 4) Train + Calibrate (Platt)
