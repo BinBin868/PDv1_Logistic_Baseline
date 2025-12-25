@@ -62,7 +62,7 @@ python scripts/30_report.py \
   --scores artifacts/pdv1_test_scores.csv \
   --y-col default_90d \
   --out artifacts/report_test.md
-**7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  
+**7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  ( row 66-173 )
 SCORES="artifacts/pdv1_test_scores.csv" REPORT="artifacts/report_test.md" python - <<'PY'
 import os, math
 import pandas as pd
@@ -170,7 +170,7 @@ print(block)  # show in terminal
 with open(report_path, "a", encoding="utf-8") as f:
     f.write(block)
 print(f"[ok] appended calibration sanity to {report_path}")
-PY****
+PY
 **8) Create data/holdout_clean.csv**
 (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
 python - <<'PY'
