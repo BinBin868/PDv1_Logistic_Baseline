@@ -172,7 +172,7 @@ with open(report_path, "a", encoding="utf-8") as f:
     f.write(block)
 print(f"[ok] appended calibration sanity to {report_path}")
 PY****
-**9) Create data/holdout_clean.csv**
+**8) Create data/holdout_clean.csv**
 (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
 python - <<'PY'
 import pandas as pd
@@ -197,7 +197,7 @@ python scripts/30_report.py \
   --scores artifacts/pdv1_holdout_scores.csv \
   --y-col default_90d \
   --out artifacts/report_holdout.md
-**8) Calibration sanity (HOLDOUT) — ODR, p̄, wMAE_decile, KS@decile****
+**9) Calibration sanity (HOLDOUT) — ODR, p̄, wMAE_decile, KS@decile****
 SCORES="artifacts/pdv1_holdout_scores.csv" REPORT="artifacts/report_holdout.md" python - <<'PY'
 import os, math
 import pandas as pd
