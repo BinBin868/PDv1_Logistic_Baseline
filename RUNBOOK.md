@@ -171,7 +171,7 @@ with open(report_path, "a", encoding="utf-8") as f:
     f.write(block)
 print(f"[ok] appended calibration sanity to {report_path}")
 PY
-**8) Create data/holdout_clean.csv**
+**8) Create data/holdout_clean.csv** ( row 176- 198 )
 (ví dụ gộp tháng 2024-11, 2024-12; ODR_current = bad rate thực tế)
 python - <<'PY'
 import pandas as pd
