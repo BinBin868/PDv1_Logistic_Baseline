@@ -196,7 +196,7 @@ python scripts/30_report.py \
   --scores artifacts/pdv1_holdout_scores.csv \
   --y-col default_90d \
   --out artifacts/report_holdout.md
-**9) Calibration sanity (HOLDOUT) — ODR, p̄, wMAE_decile, KS@decile****
+**9) Calibration sanity (HOLDOUT) — ODR, p̄, wMAE_decile, KS@decile**** ( row 200- 308 )
 SCORES="artifacts/pdv1_holdout_scores.csv" REPORT="artifacts/report_holdout.md" python - <<'PY'
 import os, math
 import pandas as pd
