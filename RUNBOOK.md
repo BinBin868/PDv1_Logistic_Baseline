@@ -145,7 +145,7 @@ python scripts/30_report.py \
   --scores artifacts/pdv1_test_scores_mm.csv \
   --y-col default_90d \
   --out artifacts/report_test_mm.md
- **7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  ( row 66-173 )
+ **7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  ( row 149-256 )
 SCORES="artifacts/pdv1_test_scores_mm.csv" REPORT="artifacts/report_test_mm.md" python - <<'PY'
 import os, math
 import pandas as pd
