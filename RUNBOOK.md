@@ -50,20 +50,103 @@ python scripts/10_train.py \
  ( SALT dùng để hash/ẩn danh id nếu cần (đặt tạm “demo_salt_123”).
 Có thể bật “mean-matching” ở bước report (phần dưới).
 export SALT="demo_salt_123"
-
 python scripts/20_score.py \
   --model artifacts/model.joblib \
   --input data/test_clean.csv \
   --id-col app_id \
   --out artifacts/pdv1_test_scores.csv
 ls -l artifacts/pdv1_test_scores.csv
-6) Report (TEST) — AUC/KS/Brier + decile
+# 5.1) Mean-matching post-score (TEST window) -> tạo pd_mm
+python - <<'PY'
+import math
+import numpy as np
+import pandas as pd
+
+# --- chọn OOT window để định nghĩa ODR_current ---
+WINDOW_MONTHS = ["2025-01", "2025-02", "2025-03"]
+
+test_path   = "data/test_clean.csv"
+scores_path = "artifacts/pdv1_test_scores.csv"
+out_path    = "artifacts/pdv1_test_scores_mm.csv"
+
+# --- helper ---
+def sigmoid(z): return 1.0/(1.0+np.exp(-z))
+def logit(p):
+    p = np.clip(p, 1e-9, 1-1e-9)
+    return np.log(p/(1-p))
+
+# --- 1) ODR_current từ test_clean theo WINDOW_MONTHS ---
+df_test = pd.read_csv(test_path, sep=None, engine="python")
+
+# lấy cột tháng: ưu tiên 'ym', nếu không có thì derive từ decision_time (YYYY-MM-DD)
+if "ym" in df_test.columns:
+    ym = df_test["ym"].astype(str)
+elif "decision_time" in df_test.columns:
+    ym = pd.to_datetime(df_test["decision_time"], errors="coerce").dt.strftime("%Y-%m")
+else:
+    raise SystemExit("[ERR] test_clean.csv cần có 'ym' hoặc 'decision_time' để chọn window tháng")
+
+mask = ym.isin(WINDOW_MONTHS)
+
+# nếu có approved thì lọc approved==1 (tuỳ logic portfolio của bạn)
+if "approved" in df_test.columns:
+    mask = mask & (df_test["approved"] == 1)
+
+y = pd.to_numeric(df_test.loc[mask, "default_90d"], errors="coerce")
+y = y[y.isin([0,1])].astype(int)
+
+if len(y) == 0:
+    raise SystemExit(f"[ERR] Window {WINDOW_MONTHS} không có dòng hợp lệ để tính ODR_current")
+
+odr_current = float(y.mean())
+print(f"[ok] ODR_current on TEST window {WINDOW_MONTHS}: {odr_current:.6f} (n={len(y)})")
+
+# --- 2) đọc scores và chọn cột PD calibrated để mean-match ---
+df = pd.read_csv(scores_path, sep=None, engine="python")
+
+if "pd_cal" in df.columns:
+    p0 = df["pd_cal"].astype(float).values
+elif "p_cal" in df.columns:
+    p0 = df["p_cal"].astype(float).values
+else:
+    raise SystemExit("[ERR] scores file thiếu cột pd_cal/p_cal để mean-match")
+
+# --- 3) tìm delta sao cho mean(sigmoid(logit(p0)+delta)) = odr_current ---
+z0 = logit(p0)
+
+# bisection trên delta
+lo, hi = -20.0, 20.0
+for _ in range(80):
+    mid = (lo + hi)/2
+    m = float(sigmoid(z0 + mid).mean())
+    if m > odr_current:
+        hi = mid
+    else:
+        lo = mid
+delta = (lo + hi)/2
+p_mm = sigmoid(z0 + delta)
+
+print(f"[ok] delta(intercept shift)={delta:.6f} | mean(pd_mm)={float(p_mm.mean()):.6f}")
+
+# --- 4) ghi file mới: đưa pd_mm thành cột 'pd' để Step 6/7 dùng luôn ---
+df_out = df.copy()
+df_out["pd_mm"] = p_mm
+df_out["pd"] = df_out["pd_mm"]   # <- để report/sanity auto pick
+df_out.to_csv(out_path, index=False)
+print(f"[ok] wrote {out_path}")
+PY
+**6) Report (TEST) — AUC/KS/Brier + decile**
 python scripts/30_report.py \
   --scores artifacts/pdv1_test_scores.csv \
   --y-col default_90d \
   --out artifacts/report_test.md
-**7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  ( row 66-173 )
-SCORES="artifacts/pdv1_test_scores.csv" REPORT="artifacts/report_test.md" python - <<'PY'
+**6b) Report mean-matched**
+python scripts/30_report.py \
+  --scores artifacts/pdv1_test_scores_mm.csv \
+  --y-col default_90d \
+  --out artifacts/report_test_mm.md
+ **7) Calibration sanity (TEST) — ODR, p̄, wMAE_decile, KS@decile**  ( row 66-173 )
+SCORES="artifacts/pdv1_test_scores_mm.csv" REPORT="artifacts/report_test_mm.md" python - <<'PY'
 import os, math
 import pandas as pd
 import numpy as np
